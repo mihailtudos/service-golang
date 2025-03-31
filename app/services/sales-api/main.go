@@ -109,7 +109,7 @@ func run(log *zap.SugaredLogger) error {
 	// related endpoints. This includes the standard library endpoints
 
 	// construct the debug mux
-	debugMux := handlers.DebugStandardLibraryMux()
+	debugMux := handlers.DebugMux(build, log)
 
 	// Start the service listening on for debug requests.
 	// Not concerned with shutting this down with load shedding.
@@ -119,12 +119,20 @@ func run(log *zap.SugaredLogger) error {
 		}
 	}()
 
+	// Make a channel to listen for an interrupt or terminal signal from the OS
+	// Use a buffered channel because the signal package requires it.
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT)
 
+	// Construct the mux for the API calls.
+	apiMux := handlers.APIMux(handlers.APIMuxConfig{
+		Shutdown: shutdown,
+		Log:      log,
+	})
+
 	api := http.Server{
 		Addr:         cfg.Web.APIHost,
-		Handler:      nil,
+		Handler:      apiMux,
 		ReadTimeout:  cfg.Web.ReadTimeout,
 		WriteTimeout: cfg.Web.WriteTimeout,
 		IdleTimeout:  cfg.Web.IdleTimeout,
