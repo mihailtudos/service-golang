@@ -1,32 +1,50 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
 
-	_ "go.uber.org/automaxprocs"
-	"go.uber.org/automaxprocs/maxprocs"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var build = "develop"
+var (
+	build   = "develop"
+	service = "SALES-API"
+)
 
 func main() {
-	// set the correct amount of threads for the service
-	// based on CPU availability or quota
-	if _, err := maxprocs.Set(); err != nil {
-		log.Fatal("maxprocs failed to set GOMAXPROCS", err)
+	log, err := initLogger(service)
+	if err != nil {
+		fmt.Println("error constructing the logger: ", err)
+		os.Exit(1)
 	}
 
-	g := runtime.GOMAXPROCS(0)
-	log.Printf("starting service build[%s] CPU[%d]", build, g)
-	defer log.Println("service stoped")
+	defer log.Sync()
 
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT)
+	if err := run(log); err != nil {
+		log.Errorw("startup", "ERROR", err)
+	}
+}
 
-	<-shutdown
-	log.Println("stopping service....")
+func run(*zap.SugaredLogger) error {
+
+	return nil
+}
+
+func initLogger(service string) (*zap.SugaredLogger, error) {
+	config := zap.NewProductionConfig()
+	config.OutputPaths = []string{"stdout"}
+	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	config.DisableStacktrace = true
+	config.InitialFields = map[string]interface{}{
+		"service": service,
+	}
+
+	log, err := config.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return log.Sugar(), nil
 }
