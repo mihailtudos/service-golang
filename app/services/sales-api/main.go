@@ -5,7 +5,9 @@ import (
 	"expvar"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/ardanlabs/conf/v3"
@@ -51,6 +53,7 @@ func run(log *zap.SugaredLogger) error {
 
 	// ==============================
 	// Configuration
+	// conf package allows to mask or noprint values
 	cfg := struct {
 		conf.Version
 		Web struct {
@@ -94,12 +97,11 @@ func run(log *zap.SugaredLogger) error {
 
 	expvar.NewString("build").Set(build)
 
-	// defer log.Infow("shutdown")
-	// shutdown := make(chan os.Signal, 1)
-	// signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT)
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGTERM, syscall.SIGINT)
 
-	// <-shutdown
-	// log.Println("stopping service....")
+	<-shutdown
+	log.Infow("stopping service....")
 
 	return nil
 }
