@@ -8,9 +8,9 @@ import (
 	"net/http/pprof"
 	"os"
 
-	"github.com/dimfeld/httptreemux/v5"
 	"github.com/mihailtudos/service3/app/services/sales-api/handlers/debug/checkgr"
 	"github.com/mihailtudos/service3/app/services/sales-api/handlers/v1/testgr"
+	"github.com/mihailtudos/service3/foundation/web"
 	"go.uber.org/zap"
 )
 
@@ -20,16 +20,17 @@ type APIMuxConfig struct {
 	Log      *zap.SugaredLogger
 }
 
-func APIMux(cfg APIMuxConfig) *httptreemux.ContextMux {
-	mux := httptreemux.NewContextMux()
+// APIMux constrcuts an http.Handler with all application routes defined.
+func APIMux(cfg APIMuxConfig) *web.App {
+	// Construct the web.App which holds all routes as well as common Middleware.
+	app := web.NewApp(
+		cfg.Shutdown,
+	)
 
-	tgh := testgr.Handlers{
-		Log: cfg.Log,
-	}
+	// Load the routes for the different versions of the API.
+	v1(app, cfg)
 
-	mux.Handle(http.MethodGet, "/v1/test", tgh.Test)
-
-	return mux
+	return app
 }
 
 // DebugStandardLibraryMux registers all the debug routes from the standard library
@@ -62,4 +63,15 @@ func DebugMux(build string, log *zap.SugaredLogger) http.Handler {
 	mux.HandleFunc("/debug/liveness", cgh.Liveness)
 
 	return mux
+}
+
+// v1 binds all version 1 routes.
+func v1(app *web.App, cfg APIMuxConfig) {
+	const version = "v1"
+
+	tgh := testgr.Handlers{
+		Log: cfg.Log,
+	}
+
+	app.Handle(http.MethodGet, version, "/test", tgh.Test)
 }
