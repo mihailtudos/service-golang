@@ -3,7 +3,10 @@ package testgr
 
 import (
 	"context"
+	"errors"
+	"github.com/mihailtudos/service3/business/sys/validate"
 	"github.com/mihailtudos/service3/foundation/web"
+	"math/rand"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -17,6 +20,11 @@ type Handlers struct {
 
 // Test handles the test endpoint.
 func (h *Handlers) Test(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	if n := rand.Intn(100); n%2 == 0 {
+		//panic("test panic")
+		return validate.NewRequestError(errors.New("trusted error"), http.StatusBadRequest)
+	}
+
 	data := struct {
 		Status string `json:"status"`
 	}{
@@ -24,7 +32,6 @@ func (h *Handlers) Test(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	statusCode := http.StatusOK
-	h.Log.Infow("test", "statusCode", statusCode, "method", r.Method, "path", r.URL.Path, "remoteaddr", r.RemoteAddr)
 
 	return web.Respond(ctx, w, data, statusCode)
 }

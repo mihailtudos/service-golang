@@ -4,7 +4,12 @@ SHELL := /bin/bash
 # Test running system
 
 # expvarmon -ports="localhost:4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.HeapAlloc,mem:memstats.HeapSys,mem:memstats.Sys"
+# hey -m GET -c 100 -n 10000 http://localhost:3000/v1/test
+load:
+	hey -m GET -c 100 -n 2000 "http://localhost:3000/v1/test"
 
+dash:
+	expvarmon -ports=":4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.HeapAlloc,mem:memstats.HeapSys,mem:memstats.Sys"
 # ===============================================================
 
 run: 

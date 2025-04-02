@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/dimfeld/httptreemux/v5"
+	"github.com/google/uuid"
 )
 
 // Handler handles a http request within our little mini framework.
@@ -48,9 +50,18 @@ func (a *App) Handle(method, group, path string, handler Handler, mw ...Middlewa
 	// function that executes for each request
 	h := func(w http.ResponseWriter, r *http.Request) {
 
-		// Call the wrapped handler functions
-		if err := handler(r.Context(), w, r); err != nil {
+		ctx := r.Context()
+		// Set the context with the required values to process the request.
+		v := Values{
+			TraceID: uuid.New().String(),
+			Now:     time.Now(),
+		}
 
+		ctx = context.WithValue(ctx, key, &v)
+
+		// Call the wrapped handler functions
+		if err := handler(ctx, w, r); err != nil {
+			a.SignalShutdown()
 			// Log error - handle it
 			// ERROR HANDLING
 			return

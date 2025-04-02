@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"expvar"
+	"github.com/mihailtudos/service3/business/web/mid"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -25,6 +26,11 @@ func APIMux(cfg APIMuxConfig) *web.App {
 	// Construct the web.App which holds all routes as well as common Middleware.
 	app := web.NewApp(
 		cfg.Shutdown,
+		mid.Logger(cfg.Log),
+		mid.Errors(cfg.Log),
+		mid.Metrics(),
+		// Panic and recover from panics need to be at the top of the chain
+		mid.Panics(),
 	)
 
 	// Load the routes for the different versions of the API.

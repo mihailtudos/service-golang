@@ -6,7 +6,10 @@ import (
 	"net/http"
 )
 
-func Respond(_ context.Context, w http.ResponseWriter, data any, statusCode int) error {
+func Respond(ctx context.Context, w http.ResponseWriter, data any, statusCode int) error {
+
+	// Set status code for request logger middleware.
+	_ = SetStatusCode(ctx, statusCode)
 
 	// If there is nothing to marshal then set status code and return.
 	if statusCode == http.StatusNoContent {
