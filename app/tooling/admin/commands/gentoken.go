@@ -1,3 +1,4 @@
+// Package commands contains the commands for the admin tool.
 package commands
 
 import (
@@ -37,7 +38,7 @@ func GenToken() error {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(8760 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		Roles: []string{"ADMIN"},
+		Roles: []string{"USER"},
 	}
 
 	// This will generate a JWT with the claims embedded in them. The database

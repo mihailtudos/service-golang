@@ -5,6 +5,8 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"github.com/mihailtudos/service3/business/sys/auth"
+	"github.com/mihailtudos/service3/foundation/keystore"
 	"net/http"
 	"os"
 	"os/signal"
@@ -67,6 +69,10 @@ func run(log *zap.SugaredLogger) error {
 			IdleTimeout     time.Duration `conf:"default:120s"`
 			ShutdownTimeout time.Duration `conf:"default:20s"`
 		}
+		Auth struct {
+			KeysFolder string `conf:"default:zarf/keys/"`
+			ActiveKID  string `conf:"default:456F21BD-1296-449A-9C2E-85A92092E966"`
+		}
 	}{
 		Version: conf.Version{
 			Build: build,
@@ -101,6 +107,22 @@ func run(log *zap.SugaredLogger) error {
 	expvar.NewString("build").Set(build)
 
 	// ==============================
+	// Initialize authentication support
+
+	log.Infow("startup", "status", "initializing authentication support")
+
+	// Construct a KeyStore from the keys in the keys folder.
+	ks, err := keystore.NewFS(os.DirFS(cfg.Auth.KeysFolder))
+	if err != nil {
+		return fmt.Errorf("reading keys: %w", err)
+	}
+
+	authorizer, err := auth.New(cfg.Auth.ActiveKID, ks)
+	if err != nil {
+		return fmt.Errorf("constructing auth: %w", err)
+	}
+
+	// ==============================
 	// Start Debug Service
 
 	log.Infow("startup", "status", "debug router started", "host", cfg.Web.DebugHost)
@@ -128,6 +150,7 @@ func run(log *zap.SugaredLogger) error {
 	apiMux := handlers.APIMux(handlers.APIMuxConfig{
 		Shutdown: shutdown,
 		Log:      log,
+		Auth:     authorizer,
 	})
 
 	api := http.Server{

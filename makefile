@@ -12,6 +12,10 @@ SHELL := /bin/bash
 # expvarmon -ports="localhost:4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.HeapAlloc,mem:memstats.HeapSys,mem:memstats.Sys"
 # hey -m GET -c 100 -n 10000 http://localhost:3000/v1/test
 
+
+# Testing auth
+# curl -il "http://localhost:3000/v1/testauth"
+# curl -H "Authorization: Bearer ${TOKEN}" "http://localhost:3000/v1/testauth"
 load:
 	hey -m GET -c 100 -n 2000 "http://localhost:3000/v1/test"
 
@@ -33,6 +37,14 @@ build:
 
 admin:
 	go run app/tooling/admin/main.go
+
+
+# ===============================================================
+# Running testing within the local environment
+
+test:
+	go test ./... -count=1
+	staticcheck -checks=all ./...
 
 # ===============================================================
 # build containers

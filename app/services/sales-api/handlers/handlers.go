@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"expvar"
+	"github.com/mihailtudos/service3/business/sys/auth"
 	"github.com/mihailtudos/service3/business/web/mid"
 	"net/http"
 	"net/http/pprof"
@@ -19,6 +20,7 @@ import (
 type APIMuxConfig struct {
 	Shutdown chan os.Signal
 	Log      *zap.SugaredLogger
+	Auth     *auth.Auth
 }
 
 // APIMux constrcuts an http.Handler with all application routes defined.
@@ -80,4 +82,5 @@ func v1(app *web.App, cfg APIMuxConfig) {
 	}
 
 	app.Handle(http.MethodGet, version, "/test", tgh.Test)
+	app.Handle(http.MethodGet, version, "/testauth", tgh.Test, mid.Authenticate(cfg.Auth), mid.Authorize("ADMIN"))
 }
