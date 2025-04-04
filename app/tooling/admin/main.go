@@ -1,21 +1,87 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/mihailtudos/service3/app/tooling/admin/commands"
+	_ "github.com/lib/pq"
+	"github.com/mihailtudos/service3/business/data/schema"
+	"github.com/mihailtudos/service3/business/sys/database"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
-	err := commands.GenToken()
+	err := migrate()
 	if err != nil {
-		log.Fatalf("error generating key: %v", err)
+		log.Fatalf("error generating schema: %v", err)
 	}
+
+	err = seed()
+	if err != nil {
+		log.Fatalf("error seeding: %v", err)
+	}
+
+}
+
+func seed() error {
+	db, err := database.Open(database.Config{
+		Host:         "localhost",
+		Name:         "postgres",
+		User:         "postgres",
+		Password:     "password",
+		MaxIdleConns: 0,
+		MaxOpenConns: 0,
+		DisableTLS:   true,
+	})
+
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := schema.Seed(ctx, db); err != nil {
+		return fmt.Errorf("seed database: %w", err)
+	}
+
+	fmt.Println("seed database successfully")
+
+	return nil
+}
+
+func migrate() error {
+	db, err := database.Open(database.Config{
+		Host:         "localhost",
+		Name:         "postgres",
+		User:         "postgres",
+		Password:     "password",
+		MaxIdleConns: 0,
+		MaxOpenConns: 0,
+		DisableTLS:   true,
+	})
+
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := schema.Migrate(ctx, db); err != nil {
+		return fmt.Errorf("migrate database: %w", err)
+	}
+
+	fmt.Println("migrate database successfully")
+
+	return nil
 }
 
 // GenKey creates an x509 private/public key for auth tokens.
