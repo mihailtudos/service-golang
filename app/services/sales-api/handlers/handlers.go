@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"expvar"
+	"github.com/jmoiron/sqlx"
 	"github.com/mihailtudos/service3/business/sys/auth"
 	"github.com/mihailtudos/service3/business/web/mid"
 	"net/http"
@@ -21,6 +22,7 @@ type APIMuxConfig struct {
 	Shutdown chan os.Signal
 	Log      *zap.SugaredLogger
 	Auth     *auth.Auth
+	DB       *sqlx.DB
 }
 
 // APIMux constrcuts an http.Handler with all application routes defined.
@@ -59,12 +61,13 @@ func DebugStandardLibraryMux() *http.ServeMux {
 }
 
 // DebugMux registers
-func DebugMux(build string, log *zap.SugaredLogger) http.Handler {
+func DebugMux(build string, log *zap.SugaredLogger, db *sqlx.DB) http.Handler {
 	mux := DebugStandardLibraryMux()
 
 	cgh := checkgr.Handlers{
 		Build: build,
 		Log:   log,
+		DB:    db,
 	}
 
 	mux.HandleFunc("/debug/readiness", cgh.Readiness)

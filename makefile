@@ -16,6 +16,9 @@ SHELL := /bin/bash
 # Testing auth
 # curl -il "http://localhost:3000/v1/testauth"
 # curl -H "Authorization: Bearer ${TOKEN}" "http://localhost:3000/v1/testauth"
+
+# Database access
+# dblab --host 0.0.0.0 --user postgres --db postgres --pass password --ssl disable --port 5432 --driver postgres
 load:
 	hey -m GET -c 100 -n 2000 "http://localhost:3000/v1/test"
 
@@ -82,6 +85,8 @@ kind-load:
 	kind load docker-image sales-api-amd64:${VERSION} --name ${KIND_CLUSTER}
 
 kind-apply:
+	kustomize build zarf/k8s/kind/database-pod | kubectl apply -f -
+	kubectl wait --namespace=database-system --timeout=120s --for=condition=Available deployment/database-pod
 	kustomize build zarf/k8s/kind/sales-pod | kubectl apply -f -
 
 kind-logs:
@@ -98,7 +103,10 @@ kind-status:
 	kubectl get pods -o wide --watch --all-namespaces
 
 kind-status-sales:
-	kubectl get pods -o wide --watch 
+	kubectl get pods -o wide --watch
+
+kind-status-database:
+	kubectl get pods -o wide --watch --namespace=database-system
 
 kind-restart:
 	kubectl rollout restart deployment sales-pod
