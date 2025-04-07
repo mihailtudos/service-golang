@@ -100,7 +100,7 @@ func StatusCheck(ctx context.Context, db *sqlx.DB) error {
 
 // NamedExecContext is a helper function to execute a CUD operation with
 // logging and tracing where field replacement is necessary.
-func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db sqlx.DB, query string, data any) (err error) {
+func NamedExecContext(ctx context.Context, log *zap.SugaredLogger, db *sqlx.DB, query string, data any) (err error) {
 	q := queryString(query, data)
 	log.Infow("database.NamedExecContext", "traceID", web.GetTraceID(ctx), "query", q)
 

@@ -5,8 +5,11 @@ import (
 	"errors"
 )
 
-// ErrInvalidID ErrorResponse occures when an ID is not in a valid form.
+// ErrInvalidID occures when an ID is not in a valid form.
 var ErrInvalidID = errors.New("ID is not in its proper form")
+
+// ErrInvalidEmail occures when an email is not in a valid form.
+var ErrInvalidEmail = errors.New("email address is not valid")
 
 // ErrorResponse is used when there is a validation error.
 type ErrorResponse = struct {
