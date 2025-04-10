@@ -36,7 +36,6 @@ func main() {
 		fmt.Println("error constructing the logger: ", err)
 		os.Exit(1)
 	}
-
 	defer log.Sync()
 
 	if err := run(log); err != nil {

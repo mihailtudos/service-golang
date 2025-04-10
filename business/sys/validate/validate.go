@@ -55,7 +55,7 @@ func Check(val any) error {
 			}
 			fields = append(fields, field)
 		}
-		return err
+		return fields
 	}
 
 	return nil

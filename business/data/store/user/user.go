@@ -51,9 +51,9 @@ func (s Store) Create(ctx context.Context, nu NewUser, now time.Time) (User, err
 
 	const q = `
 	INSERT INTO users
-		(user_id, name, email, password_hash, roles, date_start, date_end)
+		(user_id, name, email, password_hash, roles, date_created, date_updated)
 	VALUES
-	    (:user_id, :name, :email, :password_hash, :roles, :date_start, :date_end)`
+	    (:user_id, :name, :email, :password_hash, :roles, :date_created, :date_updated)`
 
 	if err := database.NamedExecContext(ctx, s.log, s.db, q, usr); err != nil {
 		return User{}, fmt.Errorf("inserting user: %w", err)
@@ -106,7 +106,7 @@ func (s Store) Update(ctx context.Context, claims auth.Claims, userID string, uu
 	    "email" = :email,
 	    "roles" = :roles,
 	    "password_hash" = :password_hash,
-	    "date_updated" = :date_updated,
+	    "date_updated" = :date_updated
 	WHERE 
 	    user_id = :user_id`
 
