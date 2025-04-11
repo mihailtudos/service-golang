@@ -1,7 +1,7 @@
 INSERT INTO users (user_id, name, email, roles, password_hash, date_created, date_updated)
 VALUES
-    ('5cf37266-3473-4006-984f-9325122678b7', 'Admin Gopher', 'admin@example.com', ARRAY['ADMIN', 'USER'], '$2a$10$1ggfMVZV6JsZUpUWom6qxew', NOW(), NOW()),
-    ('45b5fbd3-755f-4379-8f07-a58d4a30fa2f', 'User Gopher', 'user@example.com', ARRAY['USER'], '$2a$10$9/XASPKBbJKVfCAZKDH', NOW(), NOW()),
+    ('5cf37266-3473-4006-984f-9325122678b7', 'Admin Gopher', 'admin@example.com', ARRAY['ADMIN', 'USER'], '$2a$10$ZNWmz0U/6FK.OUp4d/dWze4kS.U7CHrJaeIMHXx1nmBz3e7xhkT82', NOW(), NOW()),
+    ('45b5fbd3-755f-4379-8f07-a58d4a30fa2f', 'User Gopher', 'user@example.com', ARRAY['USER'], '$2a$10$ZNWmz0U/6FK.OUp4d/dWze4kS.U7CHrJaeIMHXx1nmBz3e7xhkT82', NOW(), NOW()),
     ('28e57012-fbbb-4f67-854f-d15f8b9462c7', 'Alice Smith', 'alice@example.com', ARRAY['USER'], '$2a$10$Abc123ExampleHash1', NOW(), NOW()),
     ('df4bfa2c-5aa6-4016-9d8a-08e099441231', 'Bob Johnson', 'bob@example.com', ARRAY['USER'], '$2a$10$Def456ExampleHash2', NOW(), NOW()),
     ('763e2c62-5a9f-4d63-91d2-2c55b115ee41', 'Clara Gomez', 'clara@example.com', ARRAY['USER'], '$2a$10$Ghi789ExampleHash3', NOW(), NOW()),

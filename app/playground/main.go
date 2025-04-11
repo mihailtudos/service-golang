@@ -3,11 +3,15 @@ package main
 import (
 	"fmt"
 	"github.com/mihailtudos/service3/foundation/keystore"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"os"
 )
 
 func main() {
+
+	b, _ := bcrypt.GenerateFromPassword([]byte("gophers"), bcrypt.DefaultCost)
+	fmt.Println(string(b))
 
 	ks, err := keystore.NewFS(os.DirFS("zarf/keys/"))
 	if err != nil {

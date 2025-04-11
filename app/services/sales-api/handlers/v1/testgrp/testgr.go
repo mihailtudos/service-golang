@@ -1,5 +1,5 @@
-// Package testgr provides a handler for the test endpoints group.
-package testgr
+// Package testgrp provides a handler for the test endpoints group.
+package testgrp
 
 import (
 	"context"

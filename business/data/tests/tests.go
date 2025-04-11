@@ -4,11 +4,16 @@ package tests
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/mihailtudos/service3/business/data/schema"
+	"github.com/mihailtudos/service3/business/data/store/user"
+	"github.com/mihailtudos/service3/business/sys/auth"
 	"github.com/mihailtudos/service3/business/sys/database"
 	"github.com/mihailtudos/service3/foundation/docker"
+	"github.com/mihailtudos/service3/foundation/keystore"
 	"github.com/mihailtudos/service3/foundation/logger"
 	"go.uber.org/zap"
 	"io"
@@ -91,6 +96,43 @@ func NewUnit(t *testing.T, dbc DBContainer) (*zap.SugaredLogger, *sqlx.DB, func(
 	return log, db, teardown
 }
 
+// Test owns state for running tests.
+type Test struct {
+	Log      *zap.SugaredLogger
+	DB       *sqlx.DB
+	Auth     *auth.Auth
+	Teardown func()
+
+	t *testing.T
+}
+
+// NewIntegration creates a database, seeds it, and sets up authentication.
+func NewIntegration(t *testing.T, dbc DBContainer) *Test {
+	log, db, teardown := NewUnit(t, dbc)
+
+	// Create RSA keys needed to enable authentication in our services.
+	keyID := "4754d86b-7a6d-4df5-9c65-224741361492"
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generating private key: %v", err)
+	}
+
+	auth, err := auth.New(keyID, keystore.NewMap(map[string]*rsa.PrivateKey{keyID: privateKey}))
+	if err != nil {
+		t.Fatalf("constructing auth: %v", err)
+	}
+
+	test := &Test{
+		Log:      log,
+		DB:       db,
+		Auth:     auth,
+		Teardown: teardown,
+		t:        t,
+	}
+
+	return test
+}
+
 // StringPointer is a helper to get a *string from a string. It is in the tests
 // package because we normally don't want to deal with pointers to basic types
 // but it's useful in some tests.
@@ -103,4 +145,21 @@ func StringPointer(s string) *string {
 // useful in some tests.
 func IntPointer(i int) *int {
 	return &i
+}
+
+// Token generates new auth token for the specified user.
+func (test *Test) Token(email, password string) string {
+	test.t.Log("generating token for test...")
+
+	store := user.NewStore(test.DB, test.Log)
+	claims, err := store.Authenticate(context.Background(), time.Now(), email, password)
+	if err != nil {
+		test.t.Fatalf("authenticating: %v", err)
+	}
+	token, err := test.Auth.GenerateToken(claims)
+	if err != nil {
+		test.t.Fatalf("generating token: %v", err)
+	}
+
+	return token
 }

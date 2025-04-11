@@ -12,6 +12,14 @@ SHELL := /bin/bash
 # expvarmon -ports="localhost:4000" -vars="build,requests,goroutines,errors,panics,mem:memstats.HeapAlloc,mem:memstats.HeapSys,mem:memstats.Sys"
 # hey -m GET -c 100 -n 10000 http://localhost:3000/v1/test
 
+# For testing simple query on the system. Don't forget to 'make seed' first.
+# curl --user "admin@example.com:gophers" http://localhost:3000/v1/users/token
+# export TOKEN="COPY_YOUR_TOKEN_HERE"
+# curl -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1/users/1/2
+
+# For testing load on the service
+#hey -m GET -c 100 -n 10000 -H "Authorization: Bearer ${TOKEN}" http://localhost:3000/v1/users/1/2
+
 
 # Testing auth
 # curl -il "http://localhost:3000/v1/testauth"

@@ -60,9 +60,11 @@ func (fe FieldErrors) Error() string {
 func Cause(err error) error {
 	root := err
 	for {
-		if err := errors.Unwrap(root); err == nil {
+		unwrapped := errors.Unwrap(root)
+		if unwrapped == nil {
 			return root
 		}
-		root = err
+
+		root = unwrapped
 	}
 }
