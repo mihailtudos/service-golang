@@ -5,9 +5,8 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
-	"github.com/mihailtudos/service3/business/sys/auth"
-	"github.com/mihailtudos/service3/business/sys/database"
-	"github.com/mihailtudos/service3/foundation/keystore"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,6 +16,13 @@ import (
 
 	"github.com/ardanlabs/conf/v3"
 	"github.com/mihailtudos/service3/app/services/sales-api/handlers"
+	"github.com/mihailtudos/service3/business/sys/auth"
+	"github.com/mihailtudos/service3/business/sys/database"
+	"github.com/mihailtudos/service3/foundation/keystore"
+	"go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.9.0"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -81,6 +87,11 @@ func run(log *zap.SugaredLogger) error {
 			MaxIdleConns int    `conf:"default:0"`
 			MaxOpenConns int    `conf:"default:0"`
 			DisableTLS   bool   `conf:"default:true"`
+		}
+		Zipkin struct {
+			ReporterURI string  `conf:"default:http://localhost:9411/api/v2/spans"`
+			ServiceName string  `conf:"default:sales-api"`
+			Probability float64 `conf:"default:0.05"`
 		}
 	}{
 		Version: conf.Version{
@@ -156,6 +167,22 @@ func run(log *zap.SugaredLogger) error {
 			log.Errorw("closing database connection", "host", cfg.DB.Host, "error", err)
 		}
 	}()
+
+	// ==============================
+	// Start Tracing Support
+	log.Infow("startup", "status", "initializing OT/Zipkin support")
+
+	traceProvider, err := startTracing(
+		cfg.Zipkin.ReporterURI,
+		cfg.Zipkin.ServiceName,
+		cfg.Zipkin.Probability,
+	)
+
+	if err != nil {
+		return fmt.Errorf("starting tracing: %w", err)
+	}
+
+	defer traceProvider.Shutdown(context.Background())
 
 	// ==============================
 	// Start Debug Service
@@ -248,4 +275,33 @@ func initLogger(service string) (*zap.SugaredLogger, error) {
 	}
 
 	return log.Sugar(), nil
+}
+
+// startTracing configure open telemetery to be used with zipkin.
+func startTracing(reporterAPI, serviceName string, probability float64) (*trace.TracerProvider, error) {
+	// WARNING: The current settings are using defaults which may not be
+	// appropriate for production. Please review the documentation for
+	// opentelemetry for more information.
+
+	exporter, err := zipkin.New(reporterAPI)
+	if err != nil {
+		return nil, fmt.Errorf("creating new exporter: %w", err)
+	}
+
+	traceProvider := trace.NewTracerProvider(
+		trace.WithSampler(trace.TraceIDRatioBased(probability)),
+		trace.WithBatcher(exporter,
+			trace.WithMaxExportBatchSize(trace.DefaultMaxExportBatchSize),
+			trace.WithBatchTimeout(5*time.Millisecond),
+			trace.WithMaxExportBatchSize(trace.DefaultMaxExportBatchSize),
+		),
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String(serviceName),
+			attribute.String("exporter", "zipkin"),
+		)),
+	)
+
+	otel.SetTracerProvider(traceProvider)
+	return traceProvider, nil
 }

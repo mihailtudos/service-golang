@@ -100,6 +100,9 @@ kind-apply:
 kind-logs:
 	kubectl logs -l app=sales --all-containers=true -f --tail=100 | go run app/tooling/logfmt/main.go
 
+kind-logs-sales:
+	kubectl logs -l app=sales --all-containers=true -f --tail=100 | go run app/tooling/logfmt/main.go -service=SALES-API
+
 kind-describe:
 	kubectl describe nodes
 	kubectl describe svc

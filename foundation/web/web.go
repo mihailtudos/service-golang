@@ -3,13 +3,14 @@ package web
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"os"
 	"syscall"
 	"time"
 
 	"github.com/dimfeld/httptreemux/v5"
-	"github.com/google/uuid"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Handler handles a http request within our little mini framework.
@@ -18,17 +19,29 @@ type Handler func(ctx context.Context, w http.ResponseWriter, r *http.Request) e
 // App is the entrypoint into our application and what configures our context
 // object for each of our http handlers.
 type App struct {
-	*httptreemux.ContextMux
+	mux      *httptreemux.ContextMux
+	otmux    http.Handler
 	shutdown chan os.Signal
 	mw       []Middleware
 }
 
 // NewApp creates an App value that handles a set of routes for the application
 func NewApp(shutdown chan os.Signal, mw ...Middleware) *App {
+
+	// Create an OpenTelemetry HTTP Handler which wraps our router. This will start
+	// the initial span and annotate it with information about the request/response.
+	//
+	// This is configured to use the W3C TraceContext standard to set the remote IP
+	// and anderson headers in every trace.
+
+	mux := httptreemux.NewContextMux()
+	otmux := otelhttp.NewHandler(mux, "request")
+
 	return &App{
-		ContextMux: httptreemux.NewContextMux(),
-		shutdown:   shutdown,
-		mw:         mw,
+		mux:      mux,
+		otmux:    otmux,
+		shutdown: shutdown,
+		mw:       mw,
 	}
 }
 
@@ -36,6 +49,14 @@ func NewApp(shutdown chan os.Signal, mw ...Middleware) *App {
 // issue is detected
 func (a *App) SignalShutdown() {
 	a.shutdown <- syscall.SIGTERM
+}
+
+// ServeHTTP implements the http.Handler interface. It's the entry point for
+// all http traffic and allows the opentelemetry mux to run first to handle
+// tracing. The opentelemetry mux then calls the application mux to handle
+// application traffic. This is set up in the NewApp() function.
+func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.otmux.ServeHTTP(w, r)
 }
 
 // Handle sets a handler function for a given HTTP method and path pair
@@ -51,9 +72,13 @@ func (a *App) Handle(method, group, path string, handler Handler, mw ...Middlewa
 	h := func(w http.ResponseWriter, r *http.Request) {
 
 		ctx := r.Context()
+
+		// Capture the parent request span from the request context.
+		span := trace.SpanFromContext(ctx)
+
 		// Set the context with the required values to process the request.
 		v := Values{
-			TraceID: uuid.New().String(),
+			TraceID: span.SpanContext().TraceID().String(),
 			Now:     time.Now(),
 		}
 
@@ -76,5 +101,5 @@ func (a *App) Handle(method, group, path string, handler Handler, mw ...Middlewa
 		finalPath = "/" + group + path
 	}
 
-	a.ContextMux.Handle(method, finalPath, h)
+	a.mux.Handle(method, finalPath, h)
 }
